@@ -15,21 +15,21 @@
             <label for="phoneNumber">Enter Phone Number</label>
             <div class="phone-input-wrapper">
                 <select class="country-code" id="countryCode">
-                    <option value="+1">+1</option>
-                    <option value="+44">+44</option>
-                    <option value="+91">+91</option>
-                    <option value="+86">+86</option>
-                    <option value="+81">+81</option>
-                    <option value="+49">+49</option>
-                    <option value="+33">+33</option>
-                    <option value="+39">+39</option>
-                    <option value="+34">+34</option>
-                    <option value="+61">+61</option>
-                    <option value="+55">+55</option>
-                    <option value="+52">+52</option>
-                    <option value="+27">+27</option>
-                    <option value="+82">+82</option>
-                    <option value="+65">+65</option>
+                    <option value="+1">+1 USA</option>
+                    <option value="+44">+44 UK</option>
+                    <option value="+91">+91 India</option>
+                    <option value="+86">+86 China</option>
+                    <option value="+81">+81 Japan</option>
+                    <option value="+49">+49 Germany</option>
+                    <option value="+33">+33 France</option>
+                    <option value="+39">+39 Italy</option>
+                    <option value="+34">+34 Spain</option>
+                    <option value="+61">+61 Australia</option>
+                    <option value="+55">+55 Brazil</option>
+                    <option value="+52">+52 Mexico</option>
+                    <option value="+27">+27 South Africa</option>
+                    <option value="+82">+82 South Korea</option>
+                    <option value="+65">+65 Singapore</option>
                 </select>
                 <input 
                     type="tel" 
@@ -42,7 +42,7 @@
         </div>
 
         <div class="button-group">
-            <button class="generate-btn" onclick="generateQRCode()">
+            <button class="generate-btn" id="generateBtn" onclick="generateQRCode()">
                 <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9zm6-6h4v4h-4V3zm0 6h4v4h-4V9z"/>
                 </svg>
@@ -58,70 +58,47 @@
         </div>
 
         <div class="qr-container" id="qrContainer">
-            <div class="placeholder">
+            <div class="placeholder" id="placeholder">
                 <svg width="60" height="60" fill="#ccc" viewBox="0 0 20 20">
                     <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9zm6-6h4v4h-4V3zm0 6h4v4h-4V9z"/>
                 </svg>
                 <p>QR Code will appear here</p>
             </div>
-            <div id="qrcode"></div>
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p style="margin-top: 10px; color: #666;">Generating QR Code...</p>
             </div>
+            <canvas id="qrCanvas" style="display: none;"></canvas>
+            <img id="qrImage" style="display: none; max-width: 100%; border-radius: 10px;" />
         </div>
 
-        <!-- Instructions Modal -->
-        <div id="instructionsModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal()">&times;</span>
-                <h2>📤 Send QR Code via WhatsApp</h2>
-                <div class="instructions">
-                    <div class="instruction-step">
-                        <span class="step-number">1</span>
-                        <p>The QR code has been downloaded to your device</p>
-                    </div>
-                    <div class="instruction-step">
-                        <span class="step-number">2</span>
-                        <p>WhatsApp will open in a new window/app</p>
-                    </div>
-                    <div class="instruction-step">
-                        <span class="step-number">3</span>
-                        <p>Select the contact you want to send to</p>
-                    </div>
-                    <div class="instruction-step">
-                        <span class="step-number">4</span>
-                        <p>Click the attachment (📎) icon and select the downloaded QR code image</p>
-                    </div>
-                </div>
-                <div class="modal-buttons">
-                    <button class="action-btn download-btn" onclick="downloadOnly()">
-                        <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
-                        </svg>
-                        Download QR Code
-                    </button>
-                    <button class="action-btn whatsapp-modal-btn" onclick="openWhatsApp()">
-                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                            <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.546 20.2c-.122.425.311.857.736.736l3.032-.892A9.935 9.935 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
-                        </svg>
-                        Open WhatsApp
-                    </button>
-                </div>
-            </div>
+        <div class="action-buttons" id="actionButtons" style="display: none;">
+            <button class="secondary-btn" onclick="downloadQRCode()">
+                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                </svg>
+                Download
+            </button>
+            <button class="secondary-btn" onclick="copyToClipboard()">
+                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                </svg>
+                Copy Image
+            </button>
+            <button class="secondary-btn" onclick="shareQRCode()">
+                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
+                </svg>
+                Share
+            </button>
         </div>
 
-        <div class="success-message" id="successMessage">
-            ✅ QR Code generated successfully!
-        </div>
+        <div class="message" id="message"></div>
 
-        <div class="error-message" id="errorMessage">
-            ❌ Please enter a valid phone number
-        </div>
-
-        <!-- Hidden canvas for better quality image -->
-        <canvas id="hiddenCanvas" style="display: none;"></canvas>
+        <!-- Hidden elements for processing -->
+        <canvas id="processCanvas" style="display: none;"></canvas>
+        <a id="downloadLink" style="display: none;"></a>
     </div>
 
     <!-- QRCode.js library -->

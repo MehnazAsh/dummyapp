@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp QR Code Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .phone-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .country-code {
+            width: 80px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        input[type="tel"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        input[type="tel"]:focus,
+        .country-code:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .whatsapp-btn.active {
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        .whatsapp-btn.active:hover {
+            background: #20BA5A;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3);
+        }
+
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .qr-container.has-qr {
+            border-style: solid;
+            background: white;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #qrcode canvas {
+            display: block !important;
+        }
+
+        .placeholder {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 QR Code Generator</h1>
+        <p class="subtitle">Generate QR code and send via WhatsApp</p>
+        
+        <div class="input-group">
+            <label for="phoneNumber">Enter Phone Number</label>
+            <div class="phone-input-wrapper">
+                <select class="country-code" id="countryCode">
+                    <option value="+1">+1</option>
+                    <option value="+44">+44</option>
+                    <option value="+91">+91</option>
+                    <option value="+86">+86</option>
+                    <option value="+81">+81</option>
+                    <option value="+49">+49</option>
+                    <option value="+33">+33</option>
+                    <option value="+39">+39</option>
+                    <option value="+34">+34</option>
+                    <option value="+61">+61</option>
+                    <option value="+55">+55</option>
+                    <option value="+52">+52</option>
+                    <option value="+27">+27</option>
+                    <option value="+82">+82</option>
+                    <option value="+65">+65</option>
+                </select>
+                <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    placeholder="Enter phone number"
+                    pattern="[0-9]*"
+                    maxlength="15"
+                >
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="generate-btn" onclick="generateQRCode()">
+                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9zm6-6h4v4h-4V3zm0 6h4v4h-4V9z"/>
+                </svg>
+                Generate QR Code
+            </button>
+            <button class="whatsapp-btn" id="whatsappBtn" onclick="sendToWhatsApp()" disabled>
+                <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.546 20.2c-.122.425.311.857.736.736l3.032-.892A9.935 9.935 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+                </svg>
+                Send to WhatsApp
+            </button>
+        </div>
+
+        <div class="qr-container" id="qrContainer">
+            <div class="placeholder">
+                <svg width="60" height="60" fill="#ccc" viewBox="0 0 20 20">
+                    <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9zm6-6h4v4h-4V3zm0 6h4v4h-4V9z"/>
+                </svg>
+                <p>QR Code will appear here</p>
+            </div>
+            <div id="qrcode"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Generating QR Code...</p>
+            </div>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✅ QR Code sent to WhatsApp successfully!
+        </div>
+
+        <div class="error-message" id="errorMessage">
+            ❌ Please enter a valid phone number
+        </div>
+    </div>
+
+    <!-- QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        let currentQRCode = null;
+        let qrCodeDataURL = null;
+
+        // Format phone number as user types
+        document.getElementById('phoneNumber').addEventListener('input', function(e) {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/\D/g, '');
+        });
+
+        function generateQRCode() {
+            const countryCode = document.getElementById('countryCode').value;
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const loading = document.getElementById('loading');
+            const placeholder = document.querySelector('.placeholder');
+            
+            // Hide messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Validate phone number
+            if (!phoneNumber || phoneNumber.length < 7) {
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 3000);
+                return;
+            }
+            
+            // Show loading
+            placeholder.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Clear previous QR code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            // Simulate loading delay for better UX
+            setTimeout(() => {
+                // Generate QR code with phone number
+                const fullPhoneNumber = countryCode + phoneNumber;
+                const qrData = `tel:${fullPhoneNumber}`;
+                
+                currentQRCode = new QRCode(qrContainer, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                // Hide loading
+                loading.style.display = 'none';
+                
+                // Add styling to container
+                document.getElementById('qrContainer').classList.add('has-qr');
+                
+                // Enable WhatsApp button
+                const whatsappBtn = document.getElementById('whatsappBtn');
+                whatsappBtn.disabled = false;
+                whatsappBtn.classList.add('active');
+                
+                // Store QR code as data URL for sending
+                setTimeout(() => {
+                    const canvas = qrContainer.querySelector('canvas');
+                    if (canvas) {
+                        qrCodeDataURL = canvas.toDataURL('image/png');
+                    }
+                }, 100);
+            }, 500);
+        }
+
+        function sendToWhatsApp() {
+            const countryCode = document.getElementById('countryCode').value;
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const successMessage = document.getElementById('successMessage');
+            
+            if (!phoneNumber || !currentQRCode) {
+                return;
+            }
+            
+            // Create the message with QR code information
+            const fullPhoneNumber = countryCode + phoneNumber;
+            const message = `Here's your QR Code for phone number: ${fullPhoneNumber}\n\nNote: To share the actual QR code image via WhatsApp Web, you can:\n1. Take a screenshot of the QR code\n2. Save it and share via WhatsApp\n3. Or use WhatsApp Business API for automated sending`;
+            
+            // Encode the message for URL
+            const encodedMessage = encodeURIComponent(message);
+            
+            // Open WhatsApp with pre-filled message
+            // You can specify a recipient number or leave it empty for user to choose
+            const whatsappURL = `https://wa.me/?text=${encodedMessage}`;
+            
+            // For mobile devices, you can use the mobile protocol
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.location.href = `whatsapp://send?text=${encodedMessage}`;
+            } else {
+                window.open(whatsappURL, '_blank');
+            }
+            
+            // Show success message
+            successMessage.style.display = 'block';
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000);
+            
+            // Alternative: Download QR code as image
+            // This allows users to manually share the image file
+            downloadQRCode();
+        }
+
+        function downloadQRCode() {
+            const canvas = document.querySelector('#qrcode canvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = 'qrcode.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            }
+        }
+
+        // Allow Enter key to generate QR code
+        document.getElementById('phoneNumber').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateQRCode();
+            }
+        });
+    </script>
+</body>
+</html>
+

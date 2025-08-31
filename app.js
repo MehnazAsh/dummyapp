@@ -1,7 +1,7 @@
 // Global variables
-let currentQRCode = null;
 let qrCodeDataURL = null;
 let generatedPhoneNumber = null;
+let qrImageBlob = null;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,274 +10,323 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize all event listeners
 function initializeEventListeners() {
-    // Format phone number as user types
     const phoneInput = document.getElementById('phoneNumber');
+    
+    // Format phone number as user types
     phoneInput.addEventListener('input', function(e) {
-        // Remove non-numeric characters
         this.value = this.value.replace(/\D/g, '');
+        
+        // Enable/disable generate button based on input
+        const generateBtn = document.getElementById('generateBtn');
+        if (this.value.length >= 7) {
+            generateBtn.style.opacity = '1';
+        } else {
+            generateBtn.style.opacity = '0.7';
+        }
     });
 
     // Allow Enter key to generate QR code
     phoneInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && this.value.length >= 7) {
             generateQRCode();
         }
     });
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('instructionsModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
 }
 
-// Generate QR Code function
+// Generate QR Code with embedded image
 function generateQRCode() {
     const countryCode = document.getElementById('countryCode').value;
     const phoneNumber = document.getElementById('phoneNumber').value.trim();
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessage = document.getElementById('successMessage');
-    const loading = document.getElementById('loading');
-    const placeholder = document.querySelector('.placeholder');
     
-    // Hide messages
-    hideMessages();
-    
-    // Validate phone number
-    if (!validatePhoneNumber(phoneNumber)) {
-        showError('Please enter a valid phone number');
+    // Validate
+    if (!phoneNumber || phoneNumber.length < 7) {
+        showMessage('Please enter a valid phone number (at least 7 digits)', 'error');
         return;
     }
     
-    // Store the generated phone number
+    // Store the phone number
     generatedPhoneNumber = countryCode + phoneNumber;
     
     // Show loading
+    const placeholder = document.getElementById('placeholder');
+    const loading = document.getElementById('loading');
+    const qrImage = document.getElementById('qrImage');
+    
     placeholder.style.display = 'none';
+    qrImage.style.display = 'none';
     loading.style.display = 'block';
     
-    // Clear previous QR code
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = '';
-    
-    // Simulate loading delay for better UX
+    // Generate QR code after a brief delay
     setTimeout(() => {
-        const qrData = `tel:${generatedPhoneNumber}`;
-        
-        try {
-            // Create QR code
-            currentQRCode = new QRCode(qrContainer, {
-                text: qrData,
-                width: 200,
-                height: 200,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-            
-            // Generate high quality image
-            setTimeout(() => {
-                generateHighQualityImage(qrData);
-            }, 100);
-            
-            // Hide loading
-            loading.style.display = 'none';
-            
-            // Add styling to container
-            document.getElementById('qrContainer').classList.add('has-qr');
-            
-            // Enable WhatsApp button
-            enableWhatsAppButton();
-            
-            // Show success message
-            showSuccess('QR Code generated successfully!');
-            
-        } catch (error) {
-            console.error('Error generating QR code:', error);
-            loading.style.display = 'none';
-            placeholder.style.display = 'block';
-            showError('Failed to generate QR code. Please try again.');
-        }
-    }, 500);
+        createStyledQRCode(generatedPhoneNumber);
+    }, 300);
 }
 
-// Generate high quality image for download
-function generateHighQualityImage(qrData) {
-    const canvas = document.getElementById('hiddenCanvas');
-    const size = 400; // Higher resolution for better quality
+// Create styled QR code with branding
+function createStyledQRCode(phoneNumber) {
+    const canvas = document.getElementById('processCanvas');
+    const ctx = canvas.getContext('2d');
     
-    // Create new QR code with higher resolution
+    // Set canvas size
+    const canvasSize = 400;
+    const qrSize = 280;
+    canvas.width = canvasSize;
+    canvas.height = canvasSize + 60; // Extra space for text
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvasSize, canvasSize + 60);
+    gradient.addColorStop(0, '#f8fafb');
+    gradient.addColorStop(1, '#ffffff');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvasSize, canvasSize + 60);
+    
+    // Add decorative border
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(10, 10, canvasSize - 20, canvasSize + 40);
+    
+    // Create temporary div for QR code generation
     const tempDiv = document.createElement('div');
-    tempDiv.style.display = 'none';
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
     document.body.appendChild(tempDiv);
     
+    // Generate QR code
     new QRCode(tempDiv, {
-        text: qrData,
-        width: size,
-        height: size,
-        colorDark: "#000000",
+        text: `tel:${phoneNumber}`,
+        width: qrSize,
+        height: qrSize,
+        colorDark: "#2d3748",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
     
+    // Wait for QR code to be generated
     setTimeout(() => {
-        const tempCanvas = tempDiv.querySelector('canvas');
-        if (tempCanvas) {
-            // Copy to hidden canvas
-            canvas.width = size + 40; // Add padding
-            canvas.height = size + 80; // Add padding for text
-            const ctx = canvas.getContext('2d');
+        const qrCanvas = tempDiv.querySelector('canvas');
+        if (qrCanvas) {
+            // Draw QR code centered
+            const qrX = (canvasSize - qrSize) / 2;
+            const qrY = 50;
             
-            // White background
+            // Add white background for QR code
             ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
+            
+            // Add shadow for QR code
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 2;
             
             // Draw QR code
-            ctx.drawImage(tempCanvas, 20, 20);
+            ctx.drawImage(qrCanvas, qrX, qrY);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // Add phone icon
+            ctx.font = '24px Arial';
+            ctx.fillStyle = '#667eea';
+            ctx.textAlign = 'center';
+            ctx.fillText('📱', canvasSize / 2, 35);
             
             // Add phone number text
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
+            ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto';
+            ctx.fillStyle = '#2d3748';
             ctx.textAlign = 'center';
-            ctx.fillText(`Phone: ${generatedPhoneNumber}`, canvas.width / 2, size + 50);
+            ctx.fillText(phoneNumber, canvasSize / 2, qrY + qrSize + 35);
             
-            // Store data URL
-            qrCodeDataURL = canvas.toDataURL('image/png');
+            // Add bottom text
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto';
+            ctx.fillStyle = '#718096';
+            ctx.fillText('Scan to call', canvasSize / 2, qrY + qrSize + 55);
+            
+            // Convert to blob and display
+            canvas.toBlob((blob) => {
+                qrImageBlob = blob;
+                qrCodeDataURL = URL.createObjectURL(blob);
+                displayQRCode(qrCodeDataURL);
+            }, 'image/png');
         }
+        
+        // Clean up
         document.body.removeChild(tempDiv);
     }, 100);
 }
 
-// Send to WhatsApp function
-function sendToWhatsApp() {
-    const phoneNumber = document.getElementById('phoneNumber').value.trim();
+// Display the generated QR code
+function displayQRCode(dataURL) {
+    const loading = document.getElementById('loading');
+    const qrImage = document.getElementById('qrImage');
+    const qrContainer = document.getElementById('qrContainer');
+    const actionButtons = document.getElementById('actionButtons');
     
-    if (!phoneNumber || !currentQRCode) {
-        showError('Please generate a QR code first');
+    // Hide loading, show image
+    loading.style.display = 'none';
+    qrImage.src = dataURL;
+    qrImage.style.display = 'block';
+    qrContainer.classList.add('has-qr');
+    actionButtons.style.display = 'grid';
+    
+    // Enable WhatsApp button with pulse effect
+    const whatsappBtn = document.getElementById('whatsappBtn');
+    whatsappBtn.disabled = false;
+    whatsappBtn.classList.add('active', 'pulse');
+    
+    // Show success message
+    showMessage('QR Code generated successfully! Click "Send to WhatsApp" to share.', 'success');
+    
+    // Remove pulse after 3 seconds
+    setTimeout(() => {
+        whatsappBtn.classList.remove('pulse');
+    }, 3000);
+}
+
+// Send to WhatsApp
+async function sendToWhatsApp() {
+    if (!qrImageBlob) {
+        showMessage('Please generate a QR code first', 'error');
         return;
     }
     
-    // First download the QR code
-    downloadQRCode();
+    showMessage('Opening WhatsApp...', 'info');
     
-    // Show instructions modal
-    showModal();
-}
-
-// Open WhatsApp
-function openWhatsApp() {
-    const message = `QR Code for phone number: ${generatedPhoneNumber}\n\nPlease find the QR code image attached.`;
+    // First, download the image
+    downloadQRCode(false);
+    
+    // Create message
+    const message = `QR Code for ${generatedPhoneNumber}\n\nScan this code to call directly!`;
     const encodedMessage = encodeURIComponent(message);
     
-    // Detect device type and open WhatsApp accordingly
+    // Check if on mobile or desktop
     if (isMobileDevice()) {
-        // For mobile devices
-        window.location.href = `whatsapp://send?text=${encodedMessage}`;
+        // For mobile: Try to use Web Share API first
+        if (navigator.share && navigator.canShare) {
+            try {
+                const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { type: 'image/png' });
+                await navigator.share({
+                    title: 'QR Code',
+                    text: message,
+                    files: [file]
+                });
+                showMessage('Shared successfully!', 'success');
+            } catch (err) {
+                // Fallback to WhatsApp URL scheme
+                window.location.href = `whatsapp://send?text=${encodedMessage}`;
+            }
+        } else {
+            // Direct WhatsApp open
+            window.location.href = `whatsapp://send?text=${encodedMessage}`;
+        }
     } else {
-        // For desktop - opens WhatsApp Web
+        // For desktop: Open WhatsApp Web
         window.open(`https://web.whatsapp.com/send?text=${encodedMessage}`, '_blank');
-    }
-    
-    // Close modal after a delay
-    setTimeout(() => {
-        closeModal();
-    }, 1000);
-}
-
-// Download QR Code
-function downloadQRCode() {
-    if (qrCodeDataURL) {
-        const link = document.createElement('a');
-        const timestamp = new Date().getTime();
-        link.download = `QR_${generatedPhoneNumber}_${timestamp}.png`;
-        link.href = qrCodeDataURL;
-        link.click();
         
-        return true;
-    }
-    return false;
-}
-
-// Download only function (from modal)
-function downloadOnly() {
-    if (downloadQRCode()) {
-        showSuccess('QR Code downloaded successfully!');
+        // Show instruction
         setTimeout(() => {
-            closeModal();
+            showMessage('WhatsApp Web opened! Attach the downloaded QR code image to your message.', 'info');
         }, 1000);
     }
 }
 
-// Modal functions
-function showModal() {
-    document.getElementById('instructionsModal').style.display = 'block';
+// Download QR Code
+function downloadQRCode(showMsg = true) {
+    if (!qrCodeDataURL) {
+        showMessage('No QR code to download', 'error');
+        return;
+    }
+    
+    const link = document.getElementById('downloadLink');
+    link.href = qrCodeDataURL;
+    link.download = `QR_${generatedPhoneNumber}_${Date.now()}.png`;
+    link.click();
+    
+    if (showMsg) {
+        showMessage('QR Code downloaded successfully!', 'success');
+    }
 }
 
-function closeModal() {
-    document.getElementById('instructionsModal').style.display = 'none';
+// Copy image to clipboard
+async function copyToClipboard() {
+    if (!qrImageBlob) {
+        showMessage('No QR code to copy', 'error');
+        return;
+    }
+    
+    try {
+        // Check if Clipboard API is available
+        if (navigator.clipboard && window.ClipboardItem) {
+            const item = new ClipboardItem({ 'image/png': qrImageBlob });
+            await navigator.clipboard.write([item]);
+            showMessage('QR Code copied to clipboard!', 'success');
+        } else {
+            showMessage('Clipboard not supported on this browser', 'error');
+        }
+    } catch (err) {
+        showMessage('Failed to copy to clipboard', 'error');
+    }
 }
 
-// Helper Functions
-function validatePhoneNumber(phoneNumber) {
-    return phoneNumber && phoneNumber.length >= 7 && phoneNumber.length <= 15;
+// Share QR Code using Web Share API
+async function shareQRCode() {
+    if (!qrImageBlob) {
+        showMessage('No QR code to share', 'error');
+        return;
+    }
+    
+    // Check if Web Share API is available
+    if (navigator.share && navigator.canShare) {
+        try {
+            const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { type: 'image/png' });
+            
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Phone QR Code',
+                    text: `QR Code for ${generatedPhoneNumber}`,
+                    files: [file]
+                });
+                showMessage('Shared successfully!', 'success');
+            } else {
+                // Fallback to download
+                downloadQRCode();
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                showMessage('Sharing failed', 'error');
+            }
+        }
+    } else {
+        // Fallback to download
+        downloadQRCode();
+        showMessage('Share not supported, file downloaded instead', 'info');
+    }
 }
 
-function hideMessages() {
-    document.getElementById('errorMessage').style.display = 'none';
-    document.getElementById('successMessage').style.display = 'none';
-}
-
-function showError(message) {
-    const errorElement = document.getElementById('errorMessage');
-    errorElement.textContent = '❌ ' + message;
-    errorElement.style.display = 'block';
+// Show message
+function showMessage(text, type = 'info') {
+    const messageEl = document.getElementById('message');
+    messageEl.textContent = text;
+    messageEl.className = `message ${type}`;
+    messageEl.style.display = 'block';
+    
+    // Auto hide after 4 seconds
     setTimeout(() => {
-        errorElement.style.display = 'none';
-    }, 3000);
+        messageEl.style.display = 'none';
+    }, 4000);
 }
 
-function showSuccess(message) {
-    const successElement = document.getElementById('successMessage');
-    successElement.textContent = '✅ ' + message;
-    successElement.style.display = 'block';
-    setTimeout(() => {
-        successElement.style.display = 'none';
-    }, 3000);
-}
-
-function enableWhatsAppButton() {
-    const whatsappBtn = document.getElementById('whatsappBtn');
-    whatsappBtn.disabled = false;
-    whatsappBtn.classList.add('active');
-}
-
+// Check if mobile device
 function isMobileDevice() {
-    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Clear QR Code
-function clearQRCode() {
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = '';
-    document.getElementById('qrContainer').classList.remove('has-qr');
-    
-    const whatsappBtn = document.getElementById('whatsappBtn');
-    whatsappBtn.disabled = true;
-    whatsappBtn.classList.remove('active');
-    
-    const placeholder = document.querySelector('.placeholder');
-    placeholder.style.display = 'block';
-    
-    currentQRCode = null;
-    qrCodeDataURL = null;
-    generatedPhoneNumber = null;
-}
-
-// Export functions for global access (used by onclick attributes)
+// Export functions for onclick handlers
 window.generateQRCode = generateQRCode;
 window.sendToWhatsApp = sendToWhatsApp;
-window.openWhatsApp = openWhatsApp;
-window.downloadOnly = downloadOnly;
-window.closeModal = closeModal;
+window.downloadQRCode = downloadQRCode;
+window.copyToClipboard = copyToClipboard;
+window.shareQRCode = shareQRCode;

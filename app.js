@@ -148,8 +148,9 @@ function createStyledQRCode(phoneNumber) {
             // Convert to blob and display
             canvas.toBlob((blob) => {
                 qrImageBlob = blob;
-                qrCodeDataURL = URL.createObjectURL(blob);
-                displayQRCode(qrCodeDataURL);
+                const url = URL.createObjectURL(blob);
+                qrCodeDataURL = canvas.toDataURL('image/png');
+                displayQRCode(url);
             }, 'image/png');
         }
         
@@ -178,7 +179,7 @@ function displayQRCode(dataURL) {
     whatsappBtn.classList.add('active', 'pulse');
     
     // Show success message
-    showMessage('QR Code generated successfully! Click "Send to WhatsApp" to share.', 'success');
+    showMessage('QR Code generated successfully!', 'success');
     
     // Remove pulse after 3 seconds
     setTimeout(() => {
@@ -186,55 +187,80 @@ function displayQRCode(dataURL) {
     }, 3000);
 }
 
-// Send to WhatsApp
+// Send to WhatsApp - Fixed version
 async function sendToWhatsApp() {
     if (!qrImageBlob) {
         showMessage('Please generate a QR code first', 'error');
         return;
     }
     
-    showMessage('Opening WhatsApp...', 'info');
+    const isMobile = isMobileDevice();
     
-    // First, download the image
-    downloadQRCode(false);
-    
-    // Create message
-    const message = `QR Code for ${generatedPhoneNumber}\n\nScan this code to call directly!`;
-    const encodedMessage = encodeURIComponent(message);
-    
-    // Check if on mobile or desktop
-    if (isMobileDevice()) {
-        // For mobile: Try to use Web Share API first
-        if (navigator.share && navigator.canShare) {
-            try {
-                const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { type: 'image/png' });
+    // For mobile devices with Web Share API support
+    if (isMobile && navigator.share) {
+        try {
+            // Check if we can share files
+            const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { 
+                type: 'image/png',
+                lastModified: Date.now()
+            });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                    title: 'QR Code',
-                    text: message,
-                    files: [file]
+                    files: [file],
+                    title: 'Phone QR Code',
+                    text: `QR Code for ${generatedPhoneNumber}`
                 });
-                showMessage('Shared successfully!', 'success');
-            } catch (err) {
-                // Fallback to WhatsApp URL scheme
-                window.location.href = `whatsapp://send?text=${encodedMessage}`;
+                showMessage('Select WhatsApp from the share menu', 'success');
+            } else {
+                // Fallback for devices that can't share files
+                fallbackWhatsAppShare();
             }
-        } else {
-            // Direct WhatsApp open
-            window.location.href = `whatsapp://send?text=${encodedMessage}`;
+        } catch (err) {
+            console.error('Share failed:', err);
+            fallbackWhatsAppShare();
         }
     } else {
-        // For desktop: Open WhatsApp Web
-        window.open(`https://web.whatsapp.com/send?text=${encodedMessage}`, '_blank');
-        
-        // Show instruction
-        setTimeout(() => {
-            showMessage('WhatsApp Web opened! Attach the downloaded QR code image to your message.', 'info');
-        }, 1000);
+        // For desktop or devices without share API
+        fallbackWhatsAppShare();
     }
 }
 
+// Fallback WhatsApp sharing method
+function fallbackWhatsAppShare() {
+    // Convert blob to base64 for display
+    const reader = new FileReader();
+    reader.onloadend = function() {
+        const base64data = reader.result;
+        
+        // Create a temporary link to download
+        const tempLink = document.createElement('a');
+        tempLink.href = base64data;
+        tempLink.download = `QR_${generatedPhoneNumber}.png`;
+        
+        // Show instructions based on device
+        if (isMobileDevice()) {
+            showMessage('Tap and hold the QR code above → Save Image → Open WhatsApp → Share', 'info');
+            
+            // Open WhatsApp after a delay
+            setTimeout(() => {
+                window.location.href = 'whatsapp://send';
+            }, 2000);
+        } else {
+            // For desktop
+            showMessage('Right-click the QR code → Save Image → Open WhatsApp Web → Attach and send', 'info');
+            
+            // Open WhatsApp Web
+            setTimeout(() => {
+                window.open('https://web.whatsapp.com/', '_blank');
+            }, 2000);
+        }
+    };
+    reader.readAsDataURL(qrImageBlob);
+}
+
 // Download QR Code
-function downloadQRCode(showMsg = true) {
+function downloadQRCode() {
     if (!qrCodeDataURL) {
         showMessage('No QR code to download', 'error');
         return;
@@ -245,9 +271,7 @@ function downloadQRCode(showMsg = true) {
     link.download = `QR_${generatedPhoneNumber}_${Date.now()}.png`;
     link.click();
     
-    if (showMsg) {
-        showMessage('QR Code downloaded successfully!', 'success');
-    }
+    showMessage('QR Code downloaded successfully!', 'success');
 }
 
 // Copy image to clipboard
@@ -258,16 +282,26 @@ async function copyToClipboard() {
     }
     
     try {
-        // Check if Clipboard API is available
+        // Try to use the Clipboard API
         if (navigator.clipboard && window.ClipboardItem) {
             const item = new ClipboardItem({ 'image/png': qrImageBlob });
             await navigator.clipboard.write([item]);
-            showMessage('QR Code copied to clipboard!', 'success');
+            showMessage('QR Code copied! Paste it in WhatsApp', 'success');
+            
+            // Open WhatsApp after copying
+            setTimeout(() => {
+                if (isMobileDevice()) {
+                    window.location.href = 'whatsapp://send';
+                } else {
+                    window.open('https://web.whatsapp.com/', '_blank');
+                }
+            }, 1500);
         } else {
-            showMessage('Clipboard not supported on this browser', 'error');
+            showMessage('Copy not supported. Please use Download instead.', 'error');
         }
     } catch (err) {
-        showMessage('Failed to copy to clipboard', 'error');
+        console.error('Copy failed:', err);
+        showMessage('Copy failed. Please use Download instead.', 'error');
     }
 }
 
@@ -279,30 +313,37 @@ async function shareQRCode() {
     }
     
     // Check if Web Share API is available
-    if (navigator.share && navigator.canShare) {
+    if (navigator.share) {
         try {
-            const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { type: 'image/png' });
+            const file = new File([qrImageBlob], `QR_${generatedPhoneNumber}.png`, { 
+                type: 'image/png',
+                lastModified: Date.now()
+            });
             
-            if (navigator.canShare({ files: [file] })) {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
+                    files: [file],
                     title: 'Phone QR Code',
-                    text: `QR Code for ${generatedPhoneNumber}`,
-                    files: [file]
+                    text: `QR Code for ${generatedPhoneNumber}`
                 });
                 showMessage('Shared successfully!', 'success');
             } else {
-                // Fallback to download
-                downloadQRCode();
+                // Can't share files, share text instead
+                await navigator.share({
+                    title: 'Phone QR Code',
+                    text: `Call ${generatedPhoneNumber}`,
+                    url: window.location.href
+                });
             }
         } catch (err) {
             if (err.name !== 'AbortError') {
-                showMessage('Sharing failed', 'error');
+                console.error('Share failed:', err);
+                downloadQRCode();
             }
         }
     } else {
-        // Fallback to download
+        // No share API, download instead
         downloadQRCode();
-        showMessage('Share not supported, file downloaded instead', 'info');
     }
 }
 
@@ -313,15 +354,16 @@ function showMessage(text, type = 'info') {
     messageEl.className = `message ${type}`;
     messageEl.style.display = 'block';
     
-    // Auto hide after 4 seconds
+    // Auto hide after 5 seconds
     setTimeout(() => {
         messageEl.style.display = 'none';
-    }, 4000);
+    }, 5000);
 }
 
 // Check if mobile device
 function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+           || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
 }
 
 // Export functions for onclick handlers
